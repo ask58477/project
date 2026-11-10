@@ -1,19 +1,21 @@
 from pico2d import clear_canvas, update_canvas, get_events
 from pico2d import SDL_QUIT, SDL_KEYDOWN, SDLK_ESCAPE
 import game_framework
+from player import Player
 
-# 인게임 전역 타이머 및 속도 배율 변수
 stage_timer = 0.0
 game_speed = 1.0
+player = None
 
 def enter():
-    global stage_timer, game_speed
+    global stage_timer, game_speed, player
     stage_timer = 0.0
     game_speed = 1.0
-    print("PlayState 진입 완료")
+    player = Player()
 
 def exit():
-    print("PlayState 종료")
+    global player
+    del player
 
 def pause():
     pass
@@ -32,11 +34,11 @@ def handle_events():
 
 def update():
     global stage_timer
-    # Delta Time에 게임 속도 배율을 곱해 시간 누적
     dt = game_framework.frame_time * game_speed
     stage_timer += dt
+    player.update(dt)
 
 def draw():
     clear_canvas()
-    # Phase 2에서 이곳에 배경 및 Player.draw()가 추가됩니다.
+    player.draw()
     update_canvas()
