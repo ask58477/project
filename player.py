@@ -27,14 +27,12 @@ class Player:
         self.state = 'IDLE'
         self.frame = 0.0
         self.row = 0
-        self.slash_combo = 0
 
     def start_slash(self, direction):
         self.dir = direction
         self.state = 'SLASH'
         self.frame = 0.0
-        self.slash_combo = (self.slash_combo + 1) % 2
-        self.row = 1 if self.slash_combo == 0 else 2
+        self.row = 1
 
     def start_parry(self, direction):
         self.dir = direction
@@ -49,25 +47,36 @@ class Player:
             elif event.key == SDLK_RIGHT:
                 self.start_slash(1)
             elif event.key == SDLK_a:
-                self.start_parry(-1)
+                self.start_slash(-1)
             elif event.key == SDLK_d:
-                self.start_parry(1)
+                self.start_slash(1)
 
     def update(self, dt):
-        num_frames = len(SPRITE_LEFT_TABLE[self.row])
         if self.state == 'IDLE':
             self.row = 0
-            self.frame = (self.frame + 6.0 * dt) % num_frames
-        elif self.state in ('SLASH', 'PARRY'):
+            self.frame = (self.frame + 6.0 * dt) % len(SPRITE_LEFT_TABLE[0])
+        elif self.state == 'SLASH':
             self.frame += 18.0 * dt
-            if self.frame >= num_frames:
+            slash_frame_count = len(SPRITE_LEFT_TABLE[1]) + len(SPRITE_LEFT_TABLE[2])
+            if self.frame >= slash_frame_count:
+                self.state = 'IDLE'
+                self.frame = 0.0
+                self.row = 0
+            else:
+                self.row = 1 if self.frame < len(SPRITE_LEFT_TABLE[1]) else 2
+        elif self.state == 'PARRY':
+            self.frame += 18.0 * dt
+            if self.frame >= len(SPRITE_LEFT_TABLE[3]):
                 self.state = 'IDLE'
                 self.frame = 0.0
                 self.row = 0
 
     def draw(self, cam_x=0, cam_y=0):
         frames_in_row = SPRITE_LEFT_TABLE[self.row]
-        frame_idx = min(int(self.frame), len(frames_in_row) - 1)
+        frame_idx = int(self.frame)
+        if self.state == 'SLASH' and self.row == 2:
+            frame_idx -= len(SPRITE_LEFT_TABLE[1])
+        frame_idx = min(frame_idx, len(frames_in_row) - 1)
 
         left = int(frames_in_row[frame_idx] * self.sx)
         bottom = int((3 - self.row) * CLIP_H * self.sy)

@@ -31,6 +31,7 @@ def handle_events():
         elif event.type == SDL_KEYDOWN:
             if event.key == SDLK_ESCAPE:
                 game_framework.quit()
+        player.handle_event(event)
 
 def update():
     global stage_timer
