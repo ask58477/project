@@ -3,10 +3,19 @@ from pico2d import SDL_KEYDOWN, SDLK_LEFT, SDLK_RIGHT, SDLK_a, SDLK_d
 
 SPRITE_LEFT_TABLE = [
     [87, 511, 971, 1387],          # 0행: IDLE (4프레임)
-    [94, 543, 1003, 1389, 1828],   # 1행: SLASH 1 (5프레임)
-    [101, 565, 992, 1435, 1874],   # 2행: SLASH 2 (5프레임)
+    [55, 508, 1003, 1389, 1828],   # 1행: SLASH 1 (5프레임)
+    [0, 490, 992, 1435, 1910],    # 2행: SLASH 2 (5프레임)
     [86, 538, 974, 1407, 1873]     # 3행: PARRY (5프레임)
 ]
+
+# Keep the character pivot stable after shifting the source crop per frame.
+SLASH_DRAW_OFFSETS = {
+    (1, 0): -20,
+    (1, 1): -17,
+    (2, 0): -50,
+    (2, 1): -38,
+    (2, 4): 18,
+}
 
 BASE_SHEET_W = 2752.0
 BASE_SHEET_H = 1536.0
@@ -85,11 +94,14 @@ class Player:
 
         flip = 'h' if self.dir == -1 else ''
         offset_dir = 15 if self.dir == 1 else -15
+        draw_x = self.x + offset_dir + cam_x
+        if self.state == 'SLASH':
+            draw_x += self.dir * SLASH_DRAW_OFFSETS.get((self.row, frame_idx), 0)
 
         self.image.clip_composite_draw(
             left, bottom, w, h,
             0, flip,
-            self.x + offset_dir + cam_x, self.y + cam_y,
+            draw_x, self.y + cam_y,
             DRAW_W, DRAW_H
         )
 
