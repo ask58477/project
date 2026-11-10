@@ -26,7 +26,7 @@ DRAW_H = 192
 
 class Player:
     def __init__(self):
-        self.image = load_image('resources/player_sheet.png')
+        self.image = load_image('resources/player_sheet2.png')
         self.sx = self.image.w / BASE_SHEET_W
         self.sy = self.image.h / BASE_SHEET_H
 
