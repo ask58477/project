@@ -106,16 +106,26 @@ class Player:
         )
 
     def draw_hit_zone(self, cam_x=0, cam_y=0):
+        if self.state != 'SLASH':
+            return
+
         px = self.x + cam_x
         py = self.y + cam_y
+        near_x = px + self.dir * 50
+        far_x = px + self.dir * 160
+        zone_left = min(near_x, far_x)
+        zone_right = max(near_x, far_x)
+        perfect_x = px + self.dir * 110
+        perfect_left = min(near_x, perfect_x)
+        perfect_right = max(near_x, perfect_x)
+        zone_bottom = py - 73
+        zone_top = py + 65
 
-        # 바닥 기준선 (캐릭터 발바닥 높이에 맞춤)
-        draw_rectangle(0, py - 75, 1280, py - 73)
-
-        # 좌측 판정 영역 (-160px ~ -50px) 및 PERFECT 구간 (-110px ~ -50px)
-        draw_rectangle(px - 160, py - 73, px - 50, py + 65)
-        draw_rectangle(px - 110, py - 68, px - 50, py - 58)
-
-        # 우측 판정 영역 (+50px ~ +160px) 및 PERFECT 구간 (+50px ~ +110px)
-        draw_rectangle(px + 50, py - 73, px + 160, py + 65)
-        draw_rectangle(px + 50, py - 68, px + 110, py - 58)
+        draw_rectangle(
+            zone_left, zone_bottom, zone_right, zone_top,
+            0, 255, 255
+        )
+        draw_rectangle(
+            perfect_left, py - 68, perfect_right, py - 58,
+            255, 0, 220
+        )

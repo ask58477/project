@@ -41,5 +41,6 @@ def update():
 
 def draw():
     clear_canvas()
+    player.draw_hit_zone()
     player.draw()
     update_canvas()
