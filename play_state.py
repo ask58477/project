@@ -2,20 +2,24 @@ from pico2d import clear_canvas, update_canvas, get_events
 from pico2d import SDL_QUIT, SDL_KEYDOWN, SDLK_ESCAPE
 import game_framework
 from player import Player
+from enemy import Enemy
 
 stage_timer = 0.0
 game_speed = 1.0
 player = None
+enemy = None
 
 def enter():
-    global stage_timer, game_speed, player
+    global stage_timer, game_speed, player, enemy
     stage_timer = 0.0
     game_speed = 1.0
     player = Player()
+    enemy = Enemy(player.x + 120, player.y)
 
 def exit():
-    global player
+    global player, enemy
     del player
+    del enemy
 
 def pause():
     pass
@@ -38,9 +42,11 @@ def update():
     dt = game_framework.frame_time * game_speed
     stage_timer += dt
     player.update(dt)
+    enemy.update(dt)
 
 def draw():
     clear_canvas()
+    enemy.draw()
     player.draw_hit_zone()
     player.draw()
     update_canvas()
