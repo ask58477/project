@@ -105,21 +105,35 @@ class Player:
             DRAW_W, DRAW_H
         )
 
-    def draw_hit_zone(self, cam_x=0, cam_y=0):
+    def get_slash_hitbox(self):
         if self.state != 'SLASH':
+            return None
+
+        near_x = self.x + self.dir * 50
+        far_x = self.x + self.dir * 160
+        return (
+            min(near_x, far_x),
+            self.y - 73,
+            max(near_x, far_x),
+            self.y + 65
+        )
+
+    def draw_hit_zone(self, cam_x=0, cam_y=0):
+        hitbox = self.get_slash_hitbox()
+        if hitbox is None:
             return
 
+        zone_left, zone_bottom, zone_right, zone_top = hitbox
+        zone_left += cam_x
+        zone_right += cam_x
+        zone_bottom += cam_y
+        zone_top += cam_y
         px = self.x + cam_x
         py = self.y + cam_y
         near_x = px + self.dir * 50
-        far_x = px + self.dir * 160
-        zone_left = min(near_x, far_x)
-        zone_right = max(near_x, far_x)
         perfect_x = px + self.dir * 110
         perfect_left = min(near_x, perfect_x)
         perfect_right = max(near_x, perfect_x)
-        zone_bottom = py - 73
-        zone_top = py + 65
 
         draw_rectangle(
             zone_left, zone_bottom, zone_right, zone_top,
