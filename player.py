@@ -56,9 +56,9 @@ class Player:
             elif event.key == SDLK_RIGHT:
                 self.start_slash(1)
             elif event.key == SDLK_a:
-                self.start_slash(-1)
+                self.start_parry(-1)
             elif event.key == SDLK_d:
-                self.start_slash(1)
+                self.start_parry(1)
 
     def update(self, dt):
         if self.state == 'IDLE':
