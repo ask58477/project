@@ -16,6 +16,14 @@ PARRY_SHAKE_STRENGTH = 6
 PARRY_SHAKE_DURATION = 0.16
 DAMAGE_SHAKE_STRENGTH = 10
 DAMAGE_SHAKE_DURATION = 0.24
+EFFECT_FRAME_COUNT = 6
+EFFECT_FRAME_DURATION = 0.04
+EFFECT_FRAME_WIDTH = 320
+EFFECT_FRAME_STRIDE = 300
+EFFECT_FRAME_HEIGHT = 400
+EFFECT_FRAME_TOP = 300
+EFFECT_DRAW_W = 192
+EFFECT_DRAW_H = 240
 camera_shake_remaining = 0.0
 camera_shake_duration = 0.0
 camera_shake_strength = 0.0
@@ -23,15 +31,48 @@ camera_offset_x = 0.0
 camera_offset_y = 0.0
 SCREEN_W, SCREEN_H = 1280, 720
 background = None
+parry_effect_image = None
+parry_effects = []
 player = None
 enemies = []
 spawn_manager = None
+
+class ParryEffect:
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+        self.elapsed = 0.0
+
+    def update(self, dt):
+        self.elapsed += dt
+
+    @property
+    def is_finished(self):
+        return self.elapsed >= EFFECT_FRAME_COUNT * EFFECT_FRAME_DURATION
+
+    def draw(self, cam_x, cam_y):
+        frame = min(
+            int(self.elapsed / EFFECT_FRAME_DURATION),
+            EFFECT_FRAME_COUNT - 1
+        )
+        parry_effect_image.clip_composite_draw(
+            frame * EFFECT_FRAME_STRIDE,
+            parry_effect_image.h - EFFECT_FRAME_TOP - EFFECT_FRAME_HEIGHT,
+            EFFECT_FRAME_WIDTH,
+            EFFECT_FRAME_HEIGHT,
+            0,
+            '',
+            self.x + cam_x,
+            self.y + cam_y,
+            EFFECT_DRAW_W,
+            EFFECT_DRAW_H
+        )
 
 def enter():
     global stage_timer, game_speed, hit_stop_remaining, background
     global camera_shake_remaining, camera_shake_duration
     global camera_shake_strength, camera_offset_x, camera_offset_y
-    global player, enemies
+    global parry_effect_image, parry_effects, player, enemies
     global spawn_manager
     stage_timer = 0.0
     game_speed = 1.0
@@ -42,14 +83,17 @@ def enter():
     camera_offset_x = 0.0
     camera_offset_y = 0.0
     background = load_image('resources/backgrounds.png')
+    parry_effect_image = load_image('resources/effect.png')
+    parry_effects = []
     player = Player()
     enemies = []
     spawn_manager = SpawnManager()
 
 def exit():
-    global player, enemies
+    global player, enemies, parry_effects
     del player
     enemies.clear()
+    parry_effects.clear()
 
 def pause():
     pass
@@ -115,6 +159,11 @@ def update():
     dt = game_framework.frame_time * game_speed
     stage_timer += dt
     player.update(dt)
+    for effect in parry_effects:
+        effect.update(dt)
+    parry_effects[:] = [
+        effect for effect in parry_effects if not effect.is_finished
+    ]
     enemies.extend(spawn_manager.update(dt, player))
     slash_hitbox = player.get_slash_hitbox()
     parry_hitbox = player.get_parry_hitbox()
@@ -136,6 +185,7 @@ def update():
                 trigger_camera_shake(
                     PARRY_SHAKE_STRENGTH, PARRY_SHAKE_DURATION
                 )
+                parry_effects.append(ParryEffect(enemy.x, enemy.y))
         if (enemy.state == 'APPROACH' and
                 enemy.overlaps_hitbox(player_hitbox)):
             if player.take_damage():
@@ -158,5 +208,7 @@ def draw():
         enemy.draw(camera_offset_x, camera_offset_y)
     player.draw_hit_zone(camera_offset_x, camera_offset_y)
     player.draw(camera_offset_x, camera_offset_y)
+    for effect in parry_effects:
+        effect.draw(camera_offset_x, camera_offset_y)
     player.draw_health(camera_offset_x, camera_offset_y)
     update_canvas()
