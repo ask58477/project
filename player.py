@@ -2,7 +2,7 @@ from pico2d import load_image, draw_rectangle
 from pico2d import SDL_KEYDOWN, SDLK_LEFT, SDLK_RIGHT, SDLK_a, SDLK_d
 
 SPRITE_LEFT_TABLE = [
-    [87, 511, 971, 1387],          # 0행: IDLE (4프레임)
+    [65, 505, 971],                # 프레임 경계에 맞춰 IDLE 컷 간 칼끝 겹침 방지
     [55, 508, 1003, 1389, 1828],   # 1행: SLASH 1 (5프레임)
     [0, 490, 992, 1435, 1910],    # 2행: SLASH 2 (5프레임)
     [86, 538, 974, 1407, 1873]     # 3행: PARRY (5프레임)
@@ -17,12 +17,20 @@ SLASH_DRAW_OFFSETS = {
     (2, 4): 18,
 }
 
+IDLE_DRAW_OFFSETS = {
+    0: -11,
+    1: -3,
+}
+
 BASE_SHEET_W = 2752.0
 BASE_SHEET_H = 1536.0
 CLIP_W = 440
 CLIP_H = 384
 DRAW_W = 220
 DRAW_H = 192
+PLAYER_HITBOX_HALF_W = 40
+PLAYER_HITBOX_HALF_H = 55
+MAX_HEALTH = 3
 
 class Player:
     def __init__(self):
@@ -36,6 +44,8 @@ class Player:
         self.state = 'IDLE'
         self.frame = 0.0
         self.row = 0
+        self.max_health = MAX_HEALTH
+        self.health = self.max_health
 
     def start_slash(self, direction):
         self.dir = direction
@@ -95,6 +105,8 @@ class Player:
         flip = 'h' if self.dir == -1 else ''
         offset_dir = 15 if self.dir == 1 else -15
         draw_x = self.x + offset_dir + cam_x
+        if self.state == 'IDLE':
+            draw_x += self.dir * IDLE_DRAW_OFFSETS.get(frame_idx, 0)
         if self.state == 'SLASH':
             draw_x += self.dir * SLASH_DRAW_OFFSETS.get((self.row, frame_idx), 0)
 
@@ -116,6 +128,54 @@ class Player:
             self.y - 73,
             max(near_x, far_x),
             self.y + 65
+        )
+
+    def get_parry_hitbox(self):
+        if self.state != 'PARRY':
+            return None
+
+        near_x = self.x + self.dir * 50
+        far_x = self.x + self.dir * 160
+        return (
+            min(near_x, far_x),
+            self.y - 73,
+            max(near_x, far_x),
+            self.y + 65
+        )
+
+    def get_hitbox(self):
+        return (
+            self.x - PLAYER_HITBOX_HALF_W,
+            self.y - PLAYER_HITBOX_HALF_H,
+            self.x + PLAYER_HITBOX_HALF_W,
+            self.y + PLAYER_HITBOX_HALF_H
+        )
+
+    def take_damage(self):
+        if self.health <= 0:
+            return False
+
+        self.health -= 1
+        return True
+
+    def draw_health(self, cam_x=0, cam_y=0):
+        segment_w, segment_h, gap = 30, 12, 4
+        total_width = self.max_health * segment_w + (self.max_health - 1) * gap
+        left = self.x - total_width / 2 + cam_x
+        bottom = self.y + DRAW_H / 2 - 32 + cam_y
+        for index in range(self.max_health):
+            color = (220, 48, 48) if index < self.health else (70, 70, 70)
+            segment_left = left + index * (segment_w + gap)
+            draw_rectangle(
+                segment_left, bottom,
+                segment_left + segment_w, bottom + segment_h,
+                *color, filled=True
+            )
+
+        draw_rectangle(
+            left - 3, bottom - 3,
+            left + total_width + 3, bottom + segment_h + 3,
+            235, 235, 235
         )
 
     def draw_hit_zone(self, cam_x=0, cam_y=0):
