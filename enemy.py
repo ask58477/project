@@ -151,7 +151,7 @@ class Enemy:
             enemy_bottom > top or enemy_top < bottom
         )
 
-    def draw(self):
+    def draw(self, cam_x=0, cam_y=0):
         if self.state == 'KNOCKED_DOWN':
             knockdown_idx = min(
                 int(self.knockdown_elapsed / KNOCKDOWN_FRAME_DURATION),
@@ -169,8 +169,8 @@ class Enemy:
             FRAME_H,
             self.rotation,
             'h' if self.direction == -1 else '',
-            self.x,
-            self.y,
+            self.x + cam_x,
+            self.y + cam_y,
             DRAW_W,
             DRAW_H
         )
