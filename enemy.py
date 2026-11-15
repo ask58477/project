@@ -9,6 +9,8 @@ DRAW_W = 220
 DRAW_H = 184
 HITBOX_HALF_W = 40
 HITBOX_HALF_H = 55
+SPAWN_LEFT_X = -100
+SPAWN_RIGHT_X = 1380
 
 
 class Enemy:
@@ -17,9 +19,13 @@ class Enemy:
     KNOCKDOWN_ROW = 0
     KNOCKDOWN_FRAMES = (4, 3, 5)
 
-    def __init__(self, target_x, y):
+    def __init__(self, target_x, y, direction=-1):
+        if direction not in (-1, 1):
+            raise ValueError('direction must be -1 or 1')
+
         self.image = load_image('resources/enemy.png')
-        self.x = 1380
+        self.direction = direction
+        self.x = SPAWN_RIGHT_X if direction == -1 else SPAWN_LEFT_X
         self.y = y
         self.target_x = target_x
         self.speed = self.SPEED
@@ -41,7 +47,10 @@ class Enemy:
             return
 
         self.frame = (self.frame + 8.0 * dt) % FRAME_COUNT
-        self.x = max(self.target_x, self.x - self.speed * dt)
+        if self.direction == -1:
+            self.x = max(self.target_x, self.x - self.speed * dt)
+        else:
+            self.x = min(self.target_x, self.x + self.speed * dt)
 
     @property
     def is_finished(self):
@@ -99,7 +108,7 @@ class Enemy:
             FRAME_W,
             FRAME_H,
             0,
-            '',
+            'h' if self.direction == -1 else '',
             self.x,
             self.y,
             DRAW_W,
@@ -131,8 +140,8 @@ class RedEnemy(Enemy):
     KNOCKBACK_DISTANCE = 60
     KNOCKBACK_SPEED = 180
 
-    def __init__(self, target_x, y):
-        super().__init__(target_x, y)
+    def __init__(self, target_x, y, direction=-1):
+        super().__init__(target_x, y, direction)
         self.has_been_parried = False
         self.state_elapsed = 0.0
         self.knockback_target_x = self.x
@@ -149,10 +158,16 @@ class RedEnemy(Enemy):
                 int(self.state_elapsed / self.PARRY_REACTION_DURATION),
                 self.PARRY_REACTION_FRAMES - 1
             )
-            self.x = min(
-                self.knockback_target_x,
-                self.x + self.KNOCKBACK_SPEED * dt
-            )
+            if self.direction == -1:
+                self.x = min(
+                    self.knockback_target_x,
+                    self.x + self.KNOCKBACK_SPEED * dt
+                )
+            else:
+                self.x = max(
+                    self.knockback_target_x,
+                    self.x - self.KNOCKBACK_SPEED * dt
+                )
             if self.state_elapsed >= (
                     self.PARRY_REACTION_FRAMES *
                     self.PARRY_REACTION_DURATION):
@@ -194,5 +209,7 @@ class RedEnemy(Enemy):
         self.state_elapsed = 0.0
         self.sprite_row = 3
         self.frame = 0.0
-        self.knockback_target_x = self.x + self.KNOCKBACK_DISTANCE
+        self.knockback_target_x = (
+            self.x - self.direction * self.KNOCKBACK_DISTANCE
+        )
         return True

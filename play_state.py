@@ -3,18 +3,21 @@ from pico2d import SDL_QUIT, SDL_KEYDOWN, SDLK_ESCAPE, SDLK_q, SDLK_e, SDLK_r
 import game_framework
 from player import Player
 from enemy import Enemy, YellowEnemy, RedEnemy
+from spawn_manager import SpawnManager
 
 stage_timer = 0.0
 game_speed = 1.0
 player = None
 enemies = []
+spawn_manager = None
 
 def enter():
-    global stage_timer, game_speed, player, enemies
+    global stage_timer, game_speed, player, enemies, spawn_manager
     stage_timer = 0.0
     game_speed = 1.0
     player = Player()
     enemies = []
+    spawn_manager = SpawnManager()
 
 def exit():
     global player, enemies
@@ -48,6 +51,7 @@ def update():
     dt = game_framework.frame_time * game_speed
     stage_timer += dt
     player.update(dt)
+    enemies.extend(spawn_manager.update(dt, player))
     slash_hitbox = player.get_slash_hitbox()
     parry_hitbox = player.get_parry_hitbox()
     player_hitbox = player.get_hitbox()
