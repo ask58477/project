@@ -15,6 +15,12 @@ SPAWN_RIGHT_X = 1380
 
 class Enemy:
     SPEED = 360
+    DEATH_KNOCKBACK_SPEED = 1400
+    KNOCKBACK_DECELERATION = 500
+    KNOCKBACK_LIFT = 450
+    KNOCKBACK_GRAVITY = 1200
+    KNOCKBACK_SPIN_SPEED = 16
+    KNOCKBACK_SPIN_DECELERATION = 3
     SPRITE_ROW = 0
     KNOCKDOWN_ROW = 0
     KNOCKDOWN_FRAMES = (4, 3, 5)
@@ -35,6 +41,11 @@ class Enemy:
         self.frame = 0.0
         self.state = 'APPROACH'
         self.knockdown_elapsed = 0.0
+        self.knockback_active = False
+        self.knockback_velocity_x = 0.0
+        self.knockback_velocity_y = 0.0
+        self.rotation = 0.0
+        self.rotation_speed = 0.0
 
     def update(self, dt):
         if self.state == 'KNOCKED_DOWN':
@@ -42,6 +53,43 @@ class Enemy:
                 self.knockdown_elapsed + dt,
                 len(self.knockdown_frames) * KNOCKDOWN_FRAME_DURATION
             )
+            if self.knockback_active:
+                speed = abs(self.knockback_velocity_x)
+                direction = 1 if self.knockback_velocity_x > 0 else -1
+                deceleration_time = min(
+                    dt, speed / self.KNOCKBACK_DECELERATION
+                )
+                self.x += direction * (
+                    speed * deceleration_time -
+                    0.5 * self.KNOCKBACK_DECELERATION *
+                    deceleration_time ** 2
+                )
+                next_speed = max(
+                    0.0, speed - self.KNOCKBACK_DECELERATION * dt
+                )
+                self.knockback_velocity_x = direction * next_speed
+                self.y += (
+                    self.knockback_velocity_y * dt -
+                    0.5 * self.KNOCKBACK_GRAVITY * dt ** 2
+                )
+                self.knockback_velocity_y -= self.KNOCKBACK_GRAVITY * dt
+
+                spin_sign = 1 if self.rotation_speed >= 0 else -1
+                spin_speed = abs(self.rotation_speed)
+                spin_deceleration_time = min(
+                    dt,
+                    spin_speed / self.KNOCKBACK_SPIN_DECELERATION
+                )
+                self.rotation += spin_sign * (
+                    spin_speed * spin_deceleration_time -
+                    0.5 * self.KNOCKBACK_SPIN_DECELERATION *
+                    spin_deceleration_time ** 2
+                )
+                spin_speed = max(
+                    0.0,
+                    spin_speed - self.KNOCKBACK_SPIN_DECELERATION * dt
+                )
+                self.rotation_speed = spin_sign * spin_speed
             return
         if self.state != 'APPROACH':
             return
@@ -54,6 +102,8 @@ class Enemy:
 
     @property
     def is_finished(self):
+        if self.state == 'KNOCKED_DOWN' and self.knockback_active:
+            return self.x < SPAWN_LEFT_X or self.x > SPAWN_RIGHT_X
         return (
             self.state == 'KNOCKED_DOWN' and
             self.knockdown_elapsed >=
@@ -73,12 +123,22 @@ class Enemy:
         if not self.overlaps_hitbox(hitbox):
             return False
 
-        self.knock_down()
+        self.knock_down(knockback=True)
         return True
 
-    def knock_down(self):
+    def knock_down(self, knockback=False):
         self.state = 'KNOCKED_DOWN'
         self.knockdown_elapsed = 0.0
+        self.knockback_active = knockback
+        self.rotation = 0.0
+        if knockback:
+            self.knockback_velocity_x = (
+                -self.direction * self.DEATH_KNOCKBACK_SPEED
+            )
+            self.knockback_velocity_y = self.KNOCKBACK_LIFT
+            self.rotation_speed = (
+                self.direction * self.KNOCKBACK_SPIN_SPEED
+            )
 
     def overlaps_hitbox(self, hitbox):
         left, bottom, right, top = hitbox
@@ -107,7 +167,7 @@ class Enemy:
             self.image.h - (sprite_row + 1) * FRAME_H,
             FRAME_W,
             FRAME_H,
-            0,
+            self.rotation,
             'h' if self.direction == -1 else '',
             self.x,
             self.y,
@@ -196,7 +256,7 @@ class RedEnemy(Enemy):
                 not self.overlaps_hitbox(hitbox)):
             return False
 
-        self.knock_down()
+        self.knock_down(knockback=True)
         return True
 
     def hit_by_parry(self, hitbox):
