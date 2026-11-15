@@ -7,6 +7,8 @@ from spawn_manager import SpawnManager
 
 stage_timer = 0.0
 game_speed = 1.0
+HIT_STOP_DURATION = 0.06
+hit_stop_remaining = 0.0
 SCREEN_W, SCREEN_H = 1280, 720
 background = None
 player = None
@@ -14,10 +16,12 @@ enemies = []
 spawn_manager = None
 
 def enter():
-    global stage_timer, game_speed, background, player, enemies
+    global stage_timer, game_speed, hit_stop_remaining, background
+    global player, enemies
     global spawn_manager
     stage_timer = 0.0
     game_speed = 1.0
+    hit_stop_remaining = 0.0
     background = load_image('resources/backgrounds.png')
     player = Player()
     enemies = []
@@ -51,7 +55,13 @@ def handle_events():
         player.handle_event(event)
 
 def update():
-    global stage_timer
+    global stage_timer, hit_stop_remaining
+    if hit_stop_remaining > 0.0:
+        hit_stop_remaining = max(
+            0.0, hit_stop_remaining - game_framework.frame_time
+        )
+        return
+
     dt = game_framework.frame_time * game_speed
     stage_timer += dt
     player.update(dt)
@@ -67,6 +77,9 @@ def update():
         if parry_hitbox is not None:
             if enemy.hit_by_parry(parry_hitbox):
                 player.register_parry_hit()
+                hit_stop_remaining = max(
+                    hit_stop_remaining, HIT_STOP_DURATION
+                )
         if (enemy.state == 'APPROACH' and
                 enemy.overlaps_hitbox(player_hitbox)):
             player.take_damage()
