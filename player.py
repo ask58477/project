@@ -31,6 +31,8 @@ DRAW_H = 192
 PLAYER_HITBOX_HALF_W = 40
 PLAYER_HITBOX_HALF_H = 55
 MAX_HEALTH = 3
+WHIFF_RECOVERY_DURATION = 0.25
+PARRY_MISS_RECOVERY_DURATION = 0.1
 
 class Player:
     def __init__(self):
@@ -46,18 +48,32 @@ class Player:
         self.row = 0
         self.max_health = MAX_HEALTH
         self.health = self.max_health
+        self.slash_hit = False
+        self.whiff_recovery = 0.0
+        self.parry_hit = False
+        self.parry_recovery = 0.0
 
     def start_slash(self, direction):
+        if self.state in (
+                'SLASH', 'PARRY', 'WHIFF_RECOVERY', 'PARRY_RECOVERY'):
+            return
+
         self.dir = direction
         self.state = 'SLASH'
         self.frame = 0.0
         self.row = 1
+        self.slash_hit = False
 
     def start_parry(self, direction):
+        if self.state in (
+                'SLASH', 'PARRY', 'WHIFF_RECOVERY', 'PARRY_RECOVERY'):
+            return
+
         self.dir = direction
         self.state = 'PARRY'
         self.frame = 0.0
         self.row = 3
+        self.parry_hit = False
 
     def handle_event(self, event):
         if event.type == SDL_KEYDOWN:
@@ -75,25 +91,58 @@ class Player:
             self.row = 0
             self.frame = (self.frame + 6.0 * dt) % len(SPRITE_LEFT_TABLE[0])
         elif self.state == 'SLASH':
-            self.frame += 18.0 * dt
             slash_frame_count = len(SPRITE_LEFT_TABLE[1]) + len(SPRITE_LEFT_TABLE[2])
             if self.frame >= slash_frame_count:
+                if self.slash_hit:
+                    self.state = 'IDLE'
+                    self.frame = 0.0
+                    self.row = 0
+                else:
+                    self.state = 'WHIFF_RECOVERY'
+                    self.whiff_recovery = WHIFF_RECOVERY_DURATION
+                    self.frame = slash_frame_count - 1
+                    self.row = 2
+            else:
+                self.frame += 18.0 * dt
+                self.row = 1 if self.frame < len(SPRITE_LEFT_TABLE[1]) else 2
+        elif self.state == 'PARRY':
+            if self.frame >= len(SPRITE_LEFT_TABLE[3]):
+                if self.parry_hit:
+                    self.state = 'IDLE'
+                    self.frame = 0.0
+                    self.row = 0
+                else:
+                    self.state = 'PARRY_RECOVERY'
+                    self.parry_recovery = PARRY_MISS_RECOVERY_DURATION
+                    self.frame = len(SPRITE_LEFT_TABLE[3]) - 1
+                    self.row = 3
+            else:
+                self.frame += 18.0 * dt
+        elif self.state == 'WHIFF_RECOVERY':
+            self.whiff_recovery = max(0.0, self.whiff_recovery - dt)
+            if self.whiff_recovery == 0.0:
                 self.state = 'IDLE'
                 self.frame = 0.0
                 self.row = 0
-            else:
-                self.row = 1 if self.frame < len(SPRITE_LEFT_TABLE[1]) else 2
-        elif self.state == 'PARRY':
-            self.frame += 18.0 * dt
-            if self.frame >= len(SPRITE_LEFT_TABLE[3]):
+        elif self.state == 'PARRY_RECOVERY':
+            self.parry_recovery = max(0.0, self.parry_recovery - dt)
+            if self.parry_recovery == 0.0:
                 self.state = 'IDLE'
                 self.frame = 0.0
                 self.row = 0
 
+    def register_slash_hit(self):
+        if self.state == 'SLASH':
+            self.slash_hit = True
+
+    def register_parry_hit(self):
+        if self.state == 'PARRY':
+            self.parry_hit = True
+
     def draw(self, cam_x=0, cam_y=0):
         frames_in_row = SPRITE_LEFT_TABLE[self.row]
         frame_idx = int(self.frame)
-        if self.state == 'SLASH' and self.row == 2:
+        if self.state in ('SLASH', 'WHIFF_RECOVERY') and self.row == 2:
             frame_idx -= len(SPRITE_LEFT_TABLE[1])
         frame_idx = min(frame_idx, len(frames_in_row) - 1)
 
@@ -107,7 +156,7 @@ class Player:
         draw_x = self.x + offset_dir + cam_x
         if self.state == 'IDLE':
             draw_x += self.dir * IDLE_DRAW_OFFSETS.get(frame_idx, 0)
-        if self.state == 'SLASH':
+        if self.state in ('SLASH', 'WHIFF_RECOVERY'):
             draw_x += self.dir * SLASH_DRAW_OFFSETS.get((self.row, frame_idx), 0)
 
         self.image.clip_composite_draw(

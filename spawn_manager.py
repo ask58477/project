@@ -5,7 +5,7 @@ from enemy import Enemy, YellowEnemy, RedEnemy
 DEFAULT_SPAWN_SCHEDULE = (
     (1.0, Enemy, -1),
     (2.0, YellowEnemy, 1),
-    (3.0, RedEnemy, -1),
+    (4.0, RedEnemy, -1),
 )
 
 

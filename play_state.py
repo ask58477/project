@@ -58,9 +58,11 @@ def update():
     for enemy in enemies:
         enemy.update(dt)
         if slash_hitbox is not None:
-            enemy.hit_by_slash(slash_hitbox)
+            if enemy.hit_by_slash(slash_hitbox):
+                player.register_slash_hit()
         if parry_hitbox is not None:
-            enemy.hit_by_parry(parry_hitbox)
+            if enemy.hit_by_parry(parry_hitbox):
+                player.register_parry_hit()
         if (enemy.state == 'APPROACH' and
                 enemy.overlaps_hitbox(player_hitbox)):
             player.take_damage()
