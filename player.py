@@ -33,6 +33,7 @@ PLAYER_HITBOX_HALF_H = 55
 MAX_HEALTH = 3
 WHIFF_RECOVERY_DURATION = 0.25
 PARRY_MISS_RECOVERY_DURATION = 0.1
+GROUND_Y = 170
 
 class Player:
     def __init__(self):
@@ -41,7 +42,7 @@ class Player:
         self.sy = self.image.h / BASE_SHEET_H
 
         self.x = 640
-        self.y = 260
+        self.y = GROUND_Y
         self.dir = 1
         self.state = 'IDLE'
         self.frame = 0.0

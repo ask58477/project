@@ -1,4 +1,4 @@
-from pico2d import clear_canvas, update_canvas, get_events
+from pico2d import clear_canvas, update_canvas, get_events, load_image
 from pico2d import SDL_QUIT, SDL_KEYDOWN, SDLK_ESCAPE, SDLK_q, SDLK_e, SDLK_r
 import game_framework
 from player import Player
@@ -7,14 +7,18 @@ from spawn_manager import SpawnManager
 
 stage_timer = 0.0
 game_speed = 1.0
+SCREEN_W, SCREEN_H = 1280, 720
+background = None
 player = None
 enemies = []
 spawn_manager = None
 
 def enter():
-    global stage_timer, game_speed, player, enemies, spawn_manager
+    global stage_timer, game_speed, background, player, enemies
+    global spawn_manager
     stage_timer = 0.0
     game_speed = 1.0
+    background = load_image('resources/backgrounds.png')
     player = Player()
     enemies = []
     spawn_manager = SpawnManager()
@@ -71,6 +75,13 @@ def update():
 
 def draw():
     clear_canvas()
+    scale = max(SCREEN_W / background.w, SCREEN_H / background.h)
+    background.draw(
+        SCREEN_W / 2,
+        SCREEN_H / 2,
+        background.w * scale,
+        background.h * scale
+    )
     for enemy in enemies:
         enemy.draw()
     player.draw_hit_zone()
