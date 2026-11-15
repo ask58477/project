@@ -1,8 +1,8 @@
 from pico2d import clear_canvas, update_canvas, get_events
-from pico2d import SDL_QUIT, SDL_KEYDOWN, SDLK_ESCAPE, SDLK_q, SDLK_e
+from pico2d import SDL_QUIT, SDL_KEYDOWN, SDLK_ESCAPE, SDLK_q, SDLK_e, SDLK_r
 import game_framework
 from player import Player
-from enemy import Enemy, YellowEnemy
+from enemy import Enemy, YellowEnemy, RedEnemy
 
 stage_timer = 0.0
 game_speed = 1.0
@@ -39,6 +39,8 @@ def handle_events():
                 enemies.append(Enemy(player.x + 80, player.y))
             elif event.key == SDLK_e:
                 enemies.append(YellowEnemy(player.x + 80, player.y))
+            elif event.key == SDLK_r:
+                enemies.append(RedEnemy(player.x + 80, player.y))
         player.handle_event(event)
 
 def update():

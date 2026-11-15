@@ -14,6 +14,7 @@ HITBOX_HALF_H = 55
 class Enemy:
     SPEED = 360
     SPRITE_ROW = 0
+    KNOCKDOWN_ROW = 0
     KNOCKDOWN_FRAMES = (4, 3, 5)
 
     def __init__(self, target_x, y):
@@ -23,6 +24,7 @@ class Enemy:
         self.target_x = target_x
         self.speed = self.SPEED
         self.sprite_row = self.SPRITE_ROW
+        self.knockdown_row = self.KNOCKDOWN_ROW
         self.knockdown_frames = self.KNOCKDOWN_FRAMES
         self.frame = 0.0
         self.state = 'APPROACH'
@@ -87,11 +89,13 @@ class Enemy:
                 len(self.knockdown_frames) - 1
             )
             frame_idx = self.knockdown_frames[knockdown_idx]
+            sprite_row = self.knockdown_row
         else:
             frame_idx = int(self.frame)
+            sprite_row = self.sprite_row
         self.image.clip_composite_draw(
             frame_idx * FRAME_W,
-            self.image.h - (self.sprite_row + 1) * FRAME_H,
+            self.image.h - (sprite_row + 1) * FRAME_H,
             FRAME_W,
             FRAME_H,
             0,
@@ -106,6 +110,7 @@ class Enemy:
 class YellowEnemy(Enemy):
     SPEED = Enemy.SPEED * 0.8
     SPRITE_ROW = 1
+    KNOCKDOWN_ROW = 1
     KNOCKDOWN_FRAMES = (3, 4, 5)
 
     def hit_by_slash(self, hitbox):
@@ -113,3 +118,81 @@ class YellowEnemy(Enemy):
 
     def hit_by_parry(self, hitbox):
         return self.knock_down_if_overlapping(hitbox)
+
+
+class RedEnemy(Enemy):
+    SPEED = Enemy.SPEED * 1.8
+    SPRITE_ROW = 2
+    KNOCKDOWN_ROW = 3
+    KNOCKDOWN_FRAMES = (4, 5)
+    PARRY_REACTION_FRAMES = 4
+    PARRY_REACTION_DURATION = 0.12
+    COUNTERATTACK_FRAMES = (3, 4, 5)
+    KNOCKBACK_DISTANCE = 60
+    KNOCKBACK_SPEED = 180
+
+    def __init__(self, target_x, y):
+        super().__init__(target_x, y)
+        self.has_been_parried = False
+        self.state_elapsed = 0.0
+        self.knockback_target_x = self.x
+
+    def update(self, dt):
+        if self.state in ('APPROACH', 'KNOCKED_DOWN'):
+            super().update(dt)
+            return
+
+        self.state_elapsed += dt
+        if self.state == 'PARRIED':
+            self.sprite_row = 3
+            self.frame = min(
+                int(self.state_elapsed / self.PARRY_REACTION_DURATION),
+                self.PARRY_REACTION_FRAMES - 1
+            )
+            self.x = min(
+                self.knockback_target_x,
+                self.x + self.KNOCKBACK_SPEED * dt
+            )
+            if self.state_elapsed >= (
+                    self.PARRY_REACTION_FRAMES *
+                    self.PARRY_REACTION_DURATION):
+                self.state = 'COUNTERATTACK'
+                self.state_elapsed = 0.0
+                self.sprite_row = 2
+                self.frame = self.COUNTERATTACK_FRAMES[0]
+        elif self.state == 'COUNTERATTACK':
+            self.sprite_row = 2
+            frame_idx = min(
+                int(self.state_elapsed / self.PARRY_REACTION_DURATION),
+                len(self.COUNTERATTACK_FRAMES) - 1
+            )
+            self.frame = self.COUNTERATTACK_FRAMES[frame_idx]
+            if self.state_elapsed >= (
+                    len(self.COUNTERATTACK_FRAMES) *
+                    self.PARRY_REACTION_DURATION):
+                self.state = 'APPROACH'
+                self.state_elapsed = 0.0
+                self.sprite_row = 2
+                self.frame = 0.0
+
+    def hit_by_slash(self, hitbox):
+        if (not self.has_been_parried or
+                self.state == 'KNOCKED_DOWN' or
+                not self.overlaps_hitbox(hitbox)):
+            return False
+
+        self.knock_down()
+        return True
+
+    def hit_by_parry(self, hitbox):
+        if (self.state != 'APPROACH' or self.has_been_parried or
+                not self.overlaps_hitbox(hitbox)):
+            return False
+
+        self.has_been_parried = True
+        self.state = 'PARRIED'
+        self.state_elapsed = 0.0
+        self.sprite_row = 3
+        self.frame = 0.0
+        self.knockback_target_x = self.x + self.KNOCKBACK_DISTANCE
+        return True
